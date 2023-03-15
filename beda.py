@@ -1,3 +1,6 @@
+import pandas as pd
+from tqdm import tqdm
+
 def is_slf_intrsct(markup):    
     '''
     Функция is_slf_intrsct() определяет факт наличия пересечений
@@ -124,6 +127,10 @@ def segmentation_intrsct(markup1, markup2, chr_length=0, n_segments=10, progr_of
     if not chr_length:
         chr_length = max(list(markup1[2])[-1], list(markup2[2])[-1])
     
+    if (n_segments <= 0) or (n_segments != int(n_segments)):
+        print('Неверное количество сегментов n, должно быть целое положительное')
+        return 0
+    
     intrsct_markup = pd.DataFrame(columns=[0, 1, 2])
     segments_lst = []
     for _s in range(1,n_segments+1):
@@ -132,8 +139,14 @@ def segmentation_intrsct(markup1, markup2, chr_length=0, n_segments=10, progr_of
     for _s in tqdm(segments_lst, disable=progr_off):
         markup1_tmp = markup1.loc[(markup1[2] <= _s)]
         markup2_tmp = markup2.loc[(markup2[2] <= _s)]
+        markup1_border = markup1.loc[(markup1[2] > _s) & (markup1[1] < _s)]
+        markup2_border = markup2.loc[(markup2[2] > _s) & (markup2[1] < _s)]
         if markup1_tmp.empty or markup2_tmp.empty:
             continue
+        if not markup1_border.empty:
+            intrsct_markup = pd.concat([intrsct_markup, build_intrscts(markup1_border, markup2_tmp, progr_off=True)])
+        if not markup2_border.empty:
+            intrsct_markup = pd.concat([intrsct_markup, build_intrscts(markup1_tmp, markup2_border, progr_off=True)])
         markup1 = markup1.loc[(markup1[2] > _s)]
         markup2 = markup2.loc[(markup2[2] > _s)]
         intrsct_markup = pd.concat([intrsct_markup, build_intrscts(markup1_tmp, markup2_tmp, progr_off=True)])
